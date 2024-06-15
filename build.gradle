@@ -1,0 +1,65 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.2.6'
+	id 'io.spring.dependency-management' version '1.1.5'
+	id 'com.github.node-gradle.node' version '3.2.1'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	runtimeOnly 'org.postgresql:postgresql'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	annotationProcessor 'org.projectlombok:lombok'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+node {
+	version = '18.16.0'
+	download = true // If true, it will download the specified Node.js version
+	workDir = file("${project.buildDir}/src/main/frontend")
+	nodeModulesDir = file("${project.buildDir}/src/main/frontend")
+}
+
+task buildAngular(type: NpmTask) {
+	args = ['run', 'build']
+	workingDir = file("${project.projectDir}/src/main/frontend") // Adjust this path to your front-end directory
+}
+
+task npm_install(type: NpmTask) {
+	args = ['install', '--legacy-peer-deps']
+}
+
+task cleanAngular(type: Delete) {
+	delete "${project.buildDir}/src/resources/static"
+}
+
+assemble.dependsOn buildAngular
+assemble.dependsOn npm_install
+assemble.dependsOn cleanAngular
+
+tasks.findByName('assemble').mustRunAfter 'buildAngular'
+tasks.findByName('buildAngular').mustRunAfter 'npm_install'
+tasks.findByName('npm_install').mustRunAfter 'cleanAngular'
